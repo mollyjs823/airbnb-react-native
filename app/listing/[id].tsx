@@ -1,5 +1,5 @@
-import {Text, View, StyleSheet, Dimensions, Image, TouchableOpacity} from "react-native";
-import {useLocalSearchParams} from "expo-router";
+import {Text, View, StyleSheet, Dimensions, Image, TouchableOpacity, Share} from "react-native";
+import {useLocalSearchParams, useNavigation} from "expo-router";
 import listingsData from '@/assets/data/air-bnb-listings.json';
 import Animated, {
     interpolate,
@@ -9,10 +9,16 @@ import Animated, {
     useScrollViewOffset
 } from "react-native-reanimated";
 import {Listing} from "@/interfaces/listing";
-import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
-import {faStar} from "@fortawesome/pro-solid-svg-icons";
 import Colors from "@/constants/Colors";
 import {defaultStyles} from "@/constants/Styles";
+import {useLayoutEffect} from "react";
+
+import {FontAwesomeIcon} from "@fortawesome/react-native-fontawesome";
+import {faStar} from "@fortawesome/pro-solid-svg-icons";
+import {faArrowUpFromBracket} from "@fortawesome/pro-regular-svg-icons";
+import {faHeart} from "@fortawesome/pro-regular-svg-icons";
+import {faAngleLeft} from "@fortawesome/pro-regular-svg-icons";
+
 
 const IMG_HEIGHT = 300;
 const { width } = Dimensions.get('window');
@@ -21,8 +27,44 @@ const Page = () => {
     const { id } = useLocalSearchParams<{ id: string }>();
     const listing: Listing = (listingsData as any).find((listing: any) => listing.id === id);
     const scrollRef = useAnimatedRef<Animated.ScrollView>();
+    const navigation = useNavigation();
 
     const scrollOffset = useScrollViewOffset(scrollRef);
+
+    const shareListing = async() => {
+        try {
+            await Share.share({
+                title: listing.name,
+                url: listing.listing_url,
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerBackground: () => (
+                <Animated.View style={[headerAnimatedStyle, styles.header]} />
+            ),
+            headerRight: () => (
+                <View style={styles.bar}>
+                    <TouchableOpacity style={styles.roundButton} onPress={shareListing}>
+                        <FontAwesomeIcon icon={faArrowUpFromBracket} size={20} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.roundButton}>
+                        <FontAwesomeIcon icon={faHeart} size={20} />
+                    </TouchableOpacity>
+                </View>
+            ),
+            headerLeft: () => (
+                <TouchableOpacity style={styles.roundButton} onPress={() => navigation.goBack()}>
+                    <FontAwesomeIcon icon={faAngleLeft} size={24} color="#000" />
+                </TouchableOpacity>
+            )
+        })
+    }, []);
+
     const imageAnimatedStyle = useAnimatedStyle(() => {
         return {
             transform: [
@@ -41,6 +83,16 @@ const Page = () => {
                     )
                 }
             ]
+        };
+    });
+
+    const headerAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            opacity: interpolate(
+                scrollOffset.value,
+                [0, IMG_HEIGHT / 1.5],
+                [0, 1],
+            )
         };
     });
 
